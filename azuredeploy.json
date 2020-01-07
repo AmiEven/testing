@@ -7,7 +7,6 @@
     },
     "parameters": {
         "PlaybookName": {
-            "defaultValue": "Block-AADUser",
             "type": "string"
         },
         "UserName": {
