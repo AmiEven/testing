@@ -1,3 +1,1 @@
-<a href="https://azuredeploy.net/" target="_blank">
-    <img src="https://azuredeploy.net/deploybutton.png"/>
-</a>
+[![Deploy to Azure](https://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/?repository=https://github.com/AmiEven/testing?ptmpl=parameters.Change-Incident-Severity.json)
