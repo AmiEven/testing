@@ -7,11 +7,11 @@
     },
     "parameters": {
         "PlaybookName": {
-            "defaultValue": "Block-AADUser",
+            "defaultValue": "AmichayTest",
             "type": "string"
         },
         "UserName": {
-            "defaultValue": "<username>@<domain>",
+            "defaultValue": "<test>@<domain>",
             "type": "string"
         }
     },
