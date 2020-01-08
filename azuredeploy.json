@@ -1,13 +1,14 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "metadata":{
-        "comments": "This playbook will disable the user in Azure Active Directoy and add a comment to the incident",
-        "author": "Nicholas DiCola"
+        "comments": "This playbook will open Service Now incident when new incident open in sentinel.",
+        "author": "Yaniv Shasha"
     },
     "parameters": {
         "PlaybookName": {
-            "type": "string"
+            "defaultValue": "Open-SNOW-Ticket",
+            "type": "String"
         },
         "UserName": {
             "defaultValue": "<username>@<domain>",
@@ -15,23 +16,10 @@
         }
     },
     "variables": {
-        "AzureADConnectionName": "[concat('azuread-', parameters('PlaybookName'))]",
-        "AzureSentinelConnectionName": "[concat('azuresentinel-', parameters('PlaybookName'))]"
-    },
+        "AzureSentinelConnectionName": "[concat('azuresentinel-', parameters('PlaybookName'))]",
+        "SNOWConnectionName": "[concat('snow-', parameters('PlaybookName'))]"
+},
     "resources": [
-        {
-            "type": "Microsoft.Web/connections",
-            "apiVersion": "2016-06-01",
-            "name": "[variables('AzureADConnectionName')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "displayName": "[parameters('UserName')]",
-                "customParameterValues": {},
-                "api": {
-                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuread')]"
-                }
-            }
-        },
         {
             "type": "Microsoft.Web/connections",
             "apiVersion": "2016-06-01",
@@ -46,6 +34,19 @@
             }
         },
         {
+            "type": "Microsoft.Web/connections",
+            "apiVersion": "2016-06-01",
+            "name": "[variables('SNOWConnectionName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "displayName": "[parameters('UserName')]",
+                "customParameterValues": {},
+                "api": {
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/service-now')]"
+                }
+            }
+        },
+        {
             "type": "Microsoft.Logic/workflows",
             "apiVersion": "2017-07-01",
             "name": "[parameters('PlaybookName')]",
@@ -54,8 +55,8 @@
                 "LogicAppsCategory": "security"
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Web/connections', variables('AzureADConnectionName'))]",
-                "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]"
+                "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
+                "[resourceId('Microsoft.Web/connections', variables('SNOWConnectionName'))]"
             ],
             "properties": {
                 "state": "Enabled",
@@ -85,24 +86,6 @@
                         }
                     },
                     "actions": {
-                        "Alert_-_Get_accounts": {
-                            "runAfter": {
-                                "Alert_-_Get_incident": [
-                                    "Succeeded"
-                                ]
-                            },
-                            "type": "ApiConnection",
-                            "inputs": {
-                                "body": "@triggerBody()?['Entities']",
-                                "host": {
-                                    "connection": {
-                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
-                                    }
-                                },
-                                "method": "post",
-                                "path": "/entities/account"
-                            }
-                        },
                         "Alert_-_Get_incident": {
                             "runAfter": {},
                             "type": "ApiConnection",
@@ -113,48 +96,37 @@
                                     }
                                 },
                                 "method": "get",
-                                "path": "/Cases/@{encodeURIComponent(triggerBody()?['SystemAlertId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceSubscriptionId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceResourceGroup'])}"
+                                "path": "/cases/@{encodeURIComponent(triggerBody()?['SystemAlertId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceSubscriptionId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceResourceGroup'])}"
                             }
                         },
                         "For_each": {
-                            "foreach": "@body('Alert_-_Get_accounts')?['Accounts']",
+                            "foreach": "@body('Alert_-_Get_incident')?['value']",
                             "actions": {
-                                "Add_comment_to_incident": {
-                                    "runAfter": {
-                                        "Update_user": [
-                                            "Succeeded"
-                                        ]
-                                    },
-                                    "type": "ApiConnection",
-                                    "inputs": {
-                                        "host": {
-                                            "connection": {
-                                                "name": "@parameters('$connections')['azuresentinel']['connectionId']"
-                                            }
-                                        },
-                                        "method": "put",
-                                        "path": "/Comment/@{encodeURIComponent(triggerBody()?['WorkspaceSubscriptionId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceResourceGroup'])}/@{encodeURIComponent('Incident')}/@{encodeURIComponent(body('Alert_-_Get_incident')?['properties']?['CaseNumber'])}/@{encodeURIComponent('User was disabled in AAD via playbook')}"
-                                    }
-                                },
-                                "Update_user": {
+                                "Create_Record": {
                                     "runAfter": {},
                                     "type": "ApiConnection",
                                     "inputs": {
                                         "body": {
-                                            "accountEnabled": false
+                                            "description": "@items('For_each')?['properties']?['Description']",
+                                            "severity": "@triggerBody()?['Severity']",
+                                            "short_description": "@items('For_each')?['properties']?['Title']"
                                         },
                                         "host": {
                                             "connection": {
-                                                "name": "@parameters('$connections')['azuread']['connectionId']"
+                                                "name": "@parameters('$connections')['service-now']['connectionId']"
                                             }
                                         },
-                                        "method": "patch",
-                                        "path": "/v1.0/users/@{encodeURIComponent(concat(items('For_each')?['Name'], '@', items('for_each')?['UPNSuffix']))}"
+                                        "method": "post",
+                                        "path": "/api/now/v2/table/@{encodeURIComponent('incident')}",
+                                        "queries": {
+                                            "sysparm_display_value": false,
+                                            "sysparm_exclude_reference_link": true
+                                        }
                                     }
                                 }
                             },
                             "runAfter": {
-                                "Alert_-_Get_accounts": [
+                                "Alert_-_Get_incident": [
                                     "Succeeded"
                                 ]
                             },
@@ -166,15 +138,15 @@
                 "parameters": {
                     "$connections": {
                         "value": {
-                            "azuread": {
-                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureADConnectionName'))]",
-                                "connectionName": "[variables('AzureADConnectionName')]",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuread')]"
-                            },
                             "azuresentinel": {
                                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
                                 "connectionName": "[variables('AzureSentinelConnectionName')]",
                                 "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]"
+                            },
+                            "service-now": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', variables('SNOWConnectionName'))]",
+                                "connectionName": "[variables('SNOWConnectionName')]",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/service-now')]"
                             }
                         }
                     }
