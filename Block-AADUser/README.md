@@ -1,7 +1,5 @@
 
 # About
-This repo contains sample security playbooks for automation, orchestration and response
-
 This folder contains ARM template of "Block-AADUser" security playbook that can be used in Microsoft Azure Sentinel.
 
 To deploy the playbookinto your Azure enviroment you can use the following button:
