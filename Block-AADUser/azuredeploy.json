@@ -216,9 +216,6 @@
         },
         "displayName": "[parameters('service-now-7_displayName')]",
         "parameterValues": {
-          "instance": "[parameters('service-now-7_instance')]",
-          "username": "[parameters('service-now-7_username')]",
-          "password": "[parameters('service-now-7_password')]"
         }
       }
     },
@@ -233,11 +230,6 @@
         },
         "displayName": "[parameters('azuresentinel-7_displayName')]",
         "parameterValues": {
-          "token:clientId": "[parameters('azuresentinel-7_token:clientId')]",
-          "token:clientSecret": "[parameters('azuresentinel-7_token:clientSecret')]",
-          "token:TenantId": "[parameters('azuresentinel-7_token:TenantId')]",
-          "token:resourceUri": "[parameters('azuresentinel-7_token:resourceUri')]",
-          "token:grantType": "[parameters('azuresentinel-7_token:grantType')]"
         }
       }
     }
