@@ -9,29 +9,107 @@
         "description": "Name of the Logic App."
       }
     },
-    "service-now-test_name": {
+    "logicAppLocation": {
       "type": "string",
-      "defaultValue": "service-now-test"
+      "defaultValue": "[resourceGroup().location]",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "eastasia",
+        "southeastasia",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "westus",
+        "northcentralus",
+        "southcentralus",
+        "northeurope",
+        "westeurope",
+        "japanwest",
+        "japaneast",
+        "brazilsouth",
+        "australiaeast",
+        "australiasoutheast",
+        "westcentralus",
+        "westus2"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
     },
-    "service-now-test_displayName": {
+    "LogicAppsCategory_Tag": {
+      "type": "string",
+      "defaultValue": "security"
+    },
+    "azuresentinel-7_name": {
+      "type": "string",
+      "defaultValue": "azuresentinel-7"
+    },
+    "azuresentinel-7_displayName": {
+      "type": "string",
+      "defaultValue": "amieven@microsoft.com"
+    },
+    "azuresentinel-7_token:clientId": {
+      "type": "string",
+      "defaultValue": null,
+      "metadata": {
+        "description": "Client (or Application) ID of the Azure Active Directory application."
+      }
+    },
+    "azuresentinel-7_token:clientSecret": {
+      "type": "securestring",
+      "defaultValue": null,
+      "metadata": {
+        "description": "Client secret of the Azure Active Directory application."
+      }
+    },
+    "azuresentinel-7_token:TenantId": {
+      "type": "string",
+      "defaultValue": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+      "metadata": {
+        "description": "The tenant ID of for the Azure Active Directory application."
+      }
+    },
+    "azuresentinel-7_token:resourceUri": {
+      "type": "string",
+      "defaultValue": null,
+      "metadata": {
+        "description": "The resource you are requesting authorization to use."
+      }
+    },
+    "azuresentinel-7_token:grantType": {
+      "type": "string",
+      "defaultValue": "code",
+      "allowedValues": [
+        "code",
+        "client_credentials"
+      ],
+      "metadata": {
+        "description": "Grant type"
+      }
+    },
+    "service-now-7_name": {
+      "type": "string",
+      "defaultValue": "service-now-7"
+    },
+    "service-now-7_displayName": {
       "type": "string",
       "defaultValue": "AmichayTest"
     },
-    "service-now-test_instance": {
+    "service-now-7_instance": {
       "type": "string",
       "defaultValue": "dev95795",
       "metadata": {
         "description": "Name of the instance for ServiceNow"
       }
     },
-    "service-now-test_username": {
+    "service-now-7_username": {
       "type": "string",
       "defaultValue": "admin",
       "metadata": {
         "description": "Username for ServiceNow"
       }
     },
-    "service-now-test_password": {
+    "service-now-7_password": {
       "type": "securestring",
       "defaultValue": null,
       "metadata": {
@@ -45,9 +123,10 @@
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2016-06-01",
       "name": "[parameters('logicAppName')]",
+      "location": "[parameters('logicAppLocation')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/connections', 'service-now-test_name')]",
-        "[resourceId('Microsoft.Web/connections', parameters('service-now-test_name'))]"
+        "[resourceId('Microsoft.Web/connections', parameters('azuresentinel-7_name'))]",
+        "[resourceId('Microsoft.Web/connections', parameters('service-now-7_name'))]"
       ],
       "properties": {
         "definition": {
@@ -189,47 +268,56 @@
           "$connections": {
             "value": {
               "azuresentinel": {
-                "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/','/managedApis/azuresentinel')]",
-                "connectionName": "AZS"
+                "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/azuresentinel')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('azuresentinel-7_name'))]",
+                "connectionName": "[parameters('azuresentinel-7_name')]"
               },
               "service-now": {
-                "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/','/managedApis/service-now')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('service-now-test_name'))]",
-                "connectionName": "[parameters('service-now-test_name')]"
+                "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/service-now')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('service-now-7_name'))]",
+                "connectionName": "[parameters('service-now-7_name')]"
               }
             }
           }
         }
       },
+      "tags": {
+        "LogicAppsCategory": "[parameters('LogicAppsCategory_Tag')]"
+      }
     },
     {
       "type": "Microsoft.Web/connections",
       "apiVersion": "2016-06-01",
-
-      "name": "[parameters('service-now-test_name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "name": "[parameters('service-now-7_name')]",
       "properties": {
         "api": {
-          "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/','/managedApis/service-now')]"
+          "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/service-now')]"
         },
-        "displayName": "[parameters('service-now-test_displayName')]",
+        "displayName": "[parameters('service-now-7_displayName')]",
         "parameterValues": {
-          "instance": "[parameters('service-now-test_instance')]",
-          "username": "[parameters('service-now-test_username')]",
-          "password": "[parameters('service-now-test_password')]"
+          "instance": "[parameters('service-now-7_instance')]",
+          "username": "[parameters('service-now-7_username')]",
+          "password": "[parameters('service-now-7_password')]"
         }
       }
     },
     {
       "type": "Microsoft.Web/connections",
       "apiVersion": "2016-06-01",
-
-      "name": "AZS",
+      "location": "[parameters('logicAppLocation')]",
+      "name": "[parameters('azuresentinel-7_name')]",
       "properties": {
         "api": {
-          "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/','/managedApis/azuresentinel')]"
+          "id": "[concat('/subscriptions/',subscription().subscriptionId,'/providers/Microsoft.Web/locations/',parameters('logicAppLocation'),'/managedApis/azuresentinel')]"
         },
-        "displayName": "AZS",
+        "displayName": "[parameters('azuresentinel-7_displayName')]",
         "parameterValues": {
+          "token:clientId": "[parameters('azuresentinel-7_token:clientId')]",
+          "token:clientSecret": "[parameters('azuresentinel-7_token:clientSecret')]",
+          "token:TenantId": "[parameters('azuresentinel-7_token:TenantId')]",
+          "token:resourceUri": "[parameters('azuresentinel-7_token:resourceUri')]",
+          "token:grantType": "[parameters('azuresentinel-7_token:grantType')]"
         }
       }
     }
